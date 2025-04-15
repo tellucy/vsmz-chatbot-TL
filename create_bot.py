@@ -4,9 +4,11 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import BotCommand
 from handlers import start_router, feedback_router
+from dotenv import load_dotenv
 
 def init_bot():
-    bot_token = "BOT_TOKEN"
+    load_dotenv()
+    bot_token = os.getenv("BOT_TOKEN")
     if not bot_token:
         raise ValueError("Не указан BOT_TOKEN в переменных окружения")
     
