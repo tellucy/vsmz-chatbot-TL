@@ -19,7 +19,7 @@ class FeedbackStates(StatesGroup):
     liked = State()
     disliked = State()
 
-bot = Bot(token="8106034523:AAGnHBx-r8gUm3Lkc_STtNPJBRHbgYl_gWk", default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+bot = Bot(token="BOT_TOKEN", default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 dp = Dispatcher(storage=MemoryStorage())
 
 def save_to_json(data: dict):
