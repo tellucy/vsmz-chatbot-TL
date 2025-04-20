@@ -1,6 +1,7 @@
 import asyncio
 import json
 import aiogram
+import os
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.fsm.state import State, StatesGroup
