@@ -9,7 +9,6 @@ from aiogram.fsm.context import FSMContext
 from aiogram.enums import ParseMode
 from aiogram.utils.keyboard import ReplyKeyboardBuilder
 from aiogram.client.default import DefaultBotProperties
-from dotenv import load_dotenv
 
 class FeedbackStates(StatesGroup):
     gender = State()
@@ -20,10 +19,7 @@ class FeedbackStates(StatesGroup):
     liked = State()
     disliked = State()
 
-load_dotenv()
-bot_token = os.getenv("BOT_TOKEN")
-
-bot = Bot(token="BOT_TOKEN", default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+bot = Bot(token="8106034523:AAGnHBx-r8gUm3Lkc_STtNPJBRHbgYl_gWk", default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 dp = Dispatcher(storage=MemoryStorage())
 
 def save_to_json(data: dict):
