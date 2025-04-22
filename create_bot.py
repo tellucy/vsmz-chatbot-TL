@@ -11,12 +11,11 @@ from dotenv import load_dotenv
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-bot_token = "7735482233:AAFM373IYHJprDWaQPGBmy7lBSsarxvaaxo"
 
 async def init_bot():
     # Load environment variables
     load_dotenv()
-    # bot_token = os.getenv("BOT_TOKEN")
+    bot_token = os.getenv("BOT_TOKEN")
     if not bot_token:
         raise ValueError("Не указан BOT_TOKEN в переменных окружения")
 
