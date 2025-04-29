@@ -9,6 +9,9 @@ from aiogram.fsm.context import FSMContext
 from aiogram.enums import ParseMode
 from aiogram.utils.keyboard import ReplyKeyboardBuilder
 from aiogram.client.default import DefaultBotProperties
+from dotenv import load_dotenv
+import logging
+logging.basicConfig(level=logging.INFO)
 
 class FeedbackStates(StatesGroup):
     gender = State()
@@ -19,7 +22,31 @@ class FeedbackStates(StatesGroup):
     liked = State()
     disliked = State()
 
-bot = Bot(token="BOT_TOKEN", default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+class TranslationState(StatesGroup):
+    waiting_for_text = State()
+
+# Словарь для перевода кириллицы в глаголицу
+GLAGOLITIC_MAP = {
+    'а': 'Ⰰ', 'б': 'Ⰱ', 'в': 'Ⰲ', 'г': 'Ⰳ', 'д': 'Ⰴ',
+    'е': 'Ⰵ', 'ё': 'Ⰵ', 'ж': 'Ⰶ', 'з': 'Ⰷ', 'и': 'Ⰻ', 'й': 'Ⰼ',
+    'к': 'Ⰽ', 'л': 'Ⰾ', 'м': 'Ⰿ', 'н': 'Ⱀ', 'о': 'Ⱁ',
+    'п': 'Ⱂ', 'р': 'Ⱃ', 'с': 'Ⱄ', 'т': 'Ⱅ', 'у': 'Ⱆ',
+    'ф': 'Ⱇ', 'х': 'Ⱈ', 'ц': 'Ⱌ', 'ч': 'Ⱍ', 'ш': 'Ⱎ',
+    'щ': 'Ⱋ', 'ъ': 'Ⱏ', 'ы': 'Ⰺ', 'ь': 'Ⱐ', 'ѣ': 'Ⱑ',
+    'э': 'Ⰵ', 'ю': 'Ⱓ', 'я': 'Ⱔ',
+    'А': 'Ⰰ', 'Б': 'Ⰱ', 'В': 'Ⰲ', 'Г': 'Ⰳ', 'Д': 'Ⰴ',
+    'Е': 'Ⰵ', 'Ё': 'Ⰵ', 'Ж': 'Ⰶ', 'З': 'Ⰷ', 'И': 'Ⰻ', 'Й': 'Ⰼ',
+    'К': 'Ⰽ', 'Л': 'Ⰾ', 'М': 'Ⰿ', 'Н': 'Ⱀ', 'О': 'Ⱁ',
+    'П': 'Ⱂ', 'Р': 'Ⱃ', 'С': 'Ⱄ', 'Т': 'Ⱅ', 'У': 'Ⱆ',
+    'Ф': 'Ⱇ', 'Х': 'Ⱈ', 'Ц': 'Ⱌ', 'Ч': 'Ⱍ', 'Ш': 'Ⱎ',
+    'Щ': 'Ⱋ', 'Ъ': 'Ⱏ', 'Ы': 'Ⰺ', 'Ь': 'Ⱐ', 'Ѣ': 'Ⱑ',
+    'Э': 'Ⰵ', 'Ю': 'Ⱓ', 'Я': 'Ⱔ'
+}
+
+load_dotenv()
+bot_token = os.getenv("BOT_TOKEN")
+
+bot = Bot(token=bot_token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 dp = Dispatcher(storage=MemoryStorage())
 
 def save_to_json(data: dict):
@@ -30,10 +57,22 @@ def save_to_json(data: dict):
     except Exception as e:
         print(f"Error saving data: {e}")
 
+def translate_to_glagolitic(text: str) -> str:
+    """Переводит кириллический текст в глаголицу"""
+    result = []
+    for char in text:
+        if char in GLAGOLITIC_MAP:
+            result.append(GLAGOLITIC_MAP[char])
+        else:
+            result.append(char)  # Оставляем эмодзи и другие символы как есть
+    return ''.join(result)
+
 @dp.message(F.text == "/start")
-async def start_feedback(message: types.Message):
+async def start_feedback(message: types.Message, state: FSMContext):  # Добавляем параметр state
+    await state.clear()  # Теперь state определен
     builder = ReplyKeyboardBuilder()
     builder.add(types.KeyboardButton(text="Начать опрос"))
+    builder.add(types.KeyboardButton(text="Перевод на глаголицу"))
 
     await message.answer(
         "Здравствуйте! Спасибо за посещение музея. Нажмите кнопку, чтобы начать опрос.",
@@ -42,6 +81,7 @@ async def start_feedback(message: types.Message):
 
 @dp.message(F.text == "Начать опрос")
 async def start_survey(message: types.Message, state: FSMContext):
+    await state.set_state(FeedbackStates.gender)
     builder = ReplyKeyboardBuilder()
     for gender in ["Мужской", "Женский", "Предпочитаю не указывать"]:
         builder.add(types.KeyboardButton(text=gender))
@@ -52,6 +92,39 @@ async def start_survey(message: types.Message, state: FSMContext):
         reply_markup=builder.as_markup(resize_keyboard=True)
     )
     await state.set_state(FeedbackStates.gender)
+
+@dp.message(F.text == "Перевод на глаголицу")
+async def start_glagolitic_translation(message: types.Message, state: FSMContext):
+    await state.set_state(TranslationState.waiting_for_text)
+    await message.answer(
+        "Введите текст на кириллице для перевода в глаголицу:",
+        reply_markup=types.ReplyKeyboardRemove()
+    )
+
+@dp.message(F.text == "Перевести ещё")
+async def translate_more(message: types.Message, state: FSMContext):
+    await start_glagolitic_translation(message, state)
+
+@dp.message(F.text == "Перейти к опросу")
+async def switch_to_survey(message: types.Message, state: FSMContext):
+    await start_survey(message, state)
+
+@dp.message(TranslationState.waiting_for_text)
+async def handle_glagolitic_translation(message: types.Message, state: FSMContext):
+    # Проверяем, что текст содержит хотя бы одну кириллическую букву
+    if any(char in GLAGOLITIC_MAP for char in message.text):
+        translated = translate_to_glagolitic(message.text)
+        
+        builder = ReplyKeyboardBuilder()
+        builder.add(types.KeyboardButton(text="Перевести ещё"))
+        builder.add(types.KeyboardButton(text="Перейти к опросу"))
+        
+        await message.answer(
+            f"Перевод на глаголицу:\n\n{translated}",
+            reply_markup=builder.as_markup(resize_keyboard=True)
+        )
+    else:
+        await message.answer("Пожалуйста, введите текст, содержащий кириллические символы.")
 
 @dp.message(FeedbackStates.gender)
 async def process_gender(message: types.Message, state: FSMContext):
@@ -146,23 +219,15 @@ async def process_disliked(message: types.Message, state: FSMContext):
     await state.clear()
 
 # ================= ЗАПУСК БОТА =================
-# Запуск бота
 async def main():
-    await dp.start_polling(bot)
+    while True:
+        try:
+            logging.info("Запуск бота...")
+            await dp.start_polling(bot)
+        except Exception as e:
+            logging.error(f"Ошибка: {e}. Перезапуск через 10 секунд...")
+            await asyncio.sleep(10)
 
-# Запуск бота в зависимости от среды
 if __name__ == '__main__':
-    import asyncio
-
-    try:
-        # Проверяем, есть ли уже запущенный цикл событий
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            # Если цикл уже запущен, используем create_task
-            loop.create_task(main())
-        else:
-            # Если цикла нет, используем asyncio.run
-            asyncio.run(main())
-    except RuntimeError as e:
-        # Обработка ошибок, если что-то пошло не так
-        logging.error(f"Ошибка при запуске бота: {e}")
+    logging.basicConfig(level=logging.INFO)
+    asyncio.run(main())
